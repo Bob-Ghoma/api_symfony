@@ -3,18 +3,22 @@
 namespace App\Controller;
 
 use App\Entity\Article;
+use App\Entity\User;
+use App\Event\ArticleCreateEvent;
 use App\Repository\ArticleRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class ArticleAPIController extends AbstractController
 {
     /**
-     * @Route("/api/article", name="article_index", methods={"GET"})
+     * @Route("/api/article", methods={"GET"})
      */
     public function index(ArticleRepository $repository): Response{
         $articles = $repository->findAll();
@@ -48,12 +52,12 @@ class ArticleAPIController extends AbstractController
     /**
      * @Route("/api/article", name="article_create", methods={"POST"})
      */
-    public function create(Request $request, SerializerInterface $serializer, ValidatorInterface $validator){
+    public function create(Request $request, SerializerInterface $serializer, ValidatorInterface $validator, \Symfony\Contracts\EventDispatcher\EventDispatcherInterface $dispatcher){
         if (!$request->getContent()){
             return $this->json(["error" => "request content is required"],400);
         }
 
-
+        /** @var Article $article */
         $article = $serializer->deserialize($request->getContent(),Article::class, "json");
 
         $errors = $validator->validate($article);
@@ -62,6 +66,8 @@ class ArticleAPIController extends AbstractController
             return $this->json($errors, 400);
 
         $em = $this->getDoctrine()->getManager();
+        $event = new ArticleCreateEvent($article);
+        $dispatcher->dispatch($event, ArticleCreateEvent::Name);
     $em->persist($article);
     $em->flush();
     return $this->json($article);

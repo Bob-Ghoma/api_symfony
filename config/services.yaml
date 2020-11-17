@@ -29,3 +29,10 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+    App\EventListener\MyExceptionListener:
+        tags:
+            - {name: kernel.event_listener, event: kernel.exception}
+
+    App\EventListener\PublishListener:
+        tags:
+            - {name:kernel.event_listener, event: article.created}
